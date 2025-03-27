@@ -36,9 +36,9 @@ void Can_Send(CAN_TypeDef *CANx, int16_t id, int16_t i_201, int16_t i_202, int16
     mailBox = CAN_Transmit(CANx, &CanTxData);
 
     while (CAN_TransmitStatus(CANx, mailBox) != CAN_TxStatus_Ok) {
-        VofaData->debug2 += 0.001;
+        // VofaData->debug2 += 0.001;
     }
-    VofaData->debug2 = 0;
+    // VofaData->debug2 = 0;
 }
 
 void Can_Send_Msg(CAN_TypeDef *CANx, int16_t id, uint8_t *sendBuf, uint16_t length) {

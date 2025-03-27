@@ -208,15 +208,15 @@ void Task_Gimbal(void *Parameters) {
             yawCurrent = PID_Cloud_YawSpeed.output;
         }
         pitchCurrent = PID_Cloud_PitchSpeed.output; //-8500 * cos((pitchAngle * PI /180.0f))
-        Motor_Yaw.input   = yawCurrent;
-        Motor_Yaw_L.input = PID_Secondary_YawSpeed_L.output;
-        Motor_Yaw_R.input = PID_Secondary_YawSpeed_R.output;
-        Motor_Pitch_L.input = PID_Secondary_PitchSpeed_L.output;
-        Motor_Pitch_R.input = PID_Secondary_PitchSpeed_R.output;
-        // VofaData->debug1 = yawCurrent;
-        // VofaData->debug2 = yawAngleTarget;
-        // VofaData->debug4 = PID_Cloud_YawAngle.output;
-        // VofaData->debug3 = yawAngle;
+        // Motor_Yaw.input   = yawCurrent;
+        // Motor_Yaw_L.input = PID_Secondary_YawSpeed_L.output;
+        // Motor_Yaw_R.input = PID_Secondary_YawSpeed_R.output;
+        // Motor_Pitch_L.input = PID_Secondary_PitchSpeed_L.output;
+        // Motor_Pitch_R.input = PID_Secondary_PitchSpeed_R.output;
+        VofaData->debug1 = Motor_Pitch_L.angle;
+        VofaData->debug2 = Motor_Pitch_R.angle;
+        VofaData->debug4 = Motor_Yaw_L.angle;
+        VofaData->debug3 = Motor_Yaw_R.angle;
         // VofaData->debug5 = PID_Cloud_YawAngle.error;
         // VofaData->debug6 = yawAngleTargetControl;
 
@@ -650,8 +650,10 @@ void Task_Fire_Stir(void *Parameters) {
 		
         PID_Calculate(&PID_StirSpeed_L, stirSpeed_L, Motor_Stir_L.speed * RPM2RPS);
         PID_Calculate(&PID_StirSpeed_R, stirSpeed_R, Motor_Stir_R.speed * RPM2RPS);
-        Motor_Stir_L.input = PID_StirSpeed_L.output;
-		Motor_Stir_R.input = PID_StirSpeed_R.output;
+        //Motor_Stir_L.input = PID_StirSpeed_L.output;
+		//Motor_Stir_R.input = PID_StirSpeed_R.output;
+        Motor_Stir_L.input = 0;
+		Motor_Stir_R.input = 0;
 
         // DebugData.debug1 = PID_StirSpeed.output;
         // DebugData.debug2 = shootMode;
@@ -757,11 +759,14 @@ void Task_Fire_Frict(void *Parameters) {
 		PID_Calculate(&PID_FireR_L, targetSpeed_L, Motor_FR_L.speed);
         PID_Calculate(&PID_FireL_R, -1*targetSpeed_R, Motor_FL_R.speed);
 		PID_Calculate(&PID_FireR_R, targetSpeed_R, Motor_FR_R.speed);
-		Motor_FL_L.input = PID_FireL_L.output;
-		Motor_FR_L.input = PID_FireR_L.output;
-        Motor_FL_R.input = PID_FireL_R.output;
-		Motor_FR_R.input = PID_FireR_R.output;
-		
+		//Motor_FL_L.input = PID_FireL_L.output;
+		//Motor_FR_L.input = PID_FireR_L.output;
+        //Motor_FL_R.input = PID_FireL_R.output;
+		//Motor_FR_R.input = PID_FireR_R.output;
+		Motor_FL_L.input = 1000;
+		Motor_FR_L.input = 1000;
+        Motor_FL_R.input = 1000;
+		Motor_FR_R.input = 1000;
 
 
         // DebugData.debug1 = Motor_FL.speed;

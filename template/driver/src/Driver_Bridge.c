@@ -114,23 +114,23 @@ void Bridge_Send_Motor(Bridge_Type *bridge, uint8_t safetyMode) {
         isNotEmpty = 0;
         deviceID = Can_Send_Id_LK - 0x140 + 0x200 + 12;
         motor = MOTOR;
-        motorEnabled = motor && motor->inputEnabled;
+        motorEnabled = motor && motor->inputEnabled && motor->online;
         // Current_LK = motorEnabled ? motor->input : 0;
         Current_LK = 500;
         Speed_Lk = 5000;
         iq_LK = 1000;
         DeltaAngle_LK = 12000;
         isNotEmpty = isNotEmpty || motorEnabled;
-        VofaData->debug3 = motor->inputEnabled;
-        VofaData->debug4 = isNotEmpty;
-        VofaData->debug5 = deviceID;
+        // VofaData->debug3 = motor->inputEnabled;
+        // VofaData->debug4 = isNotEmpty;
+        // VofaData->debug5 = deviceID;
         if (isNotEmpty && !safetyMode) {
             // Can_Send(Canx[i], Can_Send_Id_LK, 0xA200, (iq_LK&0xff << 8) | (iq_LK >> 8), ((Speed_Lk)&0xff << 8) | ((Speed_Lk & 0xffff) >> 8), ((Speed_Lk>>16)&0xff << 8) | (((Speed_Lk >> 16) & 0xffff) >> 8));
             Can_Send(Canx[i], Can_Send_Id_LK, 0xA000, 0, 0xC800, 0);
-            VofaData->debug1 = 1;
+            // VofaData->debug1 = 1;
         } else if (isNotEmpty && safetyMode) {
             Can_Send(Canx[i], Can_Send_Id_LK, 0xA200, 0, 0, 0);
-            VofaData->debug1 = 0;
+            // VofaData->debug1 = 0;
         }
     }
 }
