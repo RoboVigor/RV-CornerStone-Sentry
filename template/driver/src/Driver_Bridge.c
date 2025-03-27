@@ -5,8 +5,8 @@
 void Bridge_Bind(Bridge_Type *bridge, uint8_t type, uint32_t deviceID, void *handle) {
     if (IS_MOTOR) {
         MOTOR = handle;
-    }else if(deviceID <= 0x188 && deviceID >= 0x181){
-        deviceID = deviceID - 0x180 + 0x200 + 12;
+    }else if(deviceID <= 0x148 && deviceID >= 0x141){
+        deviceID = deviceID - 0x140 + 0x200 + 12;
         MOTOR = handle;
     } 
     else {
@@ -85,6 +85,9 @@ void Bridge_Send_Motor(Bridge_Type *bridge, uint8_t safetyMode) {
     uint32_t            deviceID;
     uint8_t             type;
     static int16_t      Current_LK;             // LK电机速度控制
+    static int32_t      Speed_Lk;
+    static int16_t      iq_LK;
+    static int32_t      DeltaAngle_LK;
     static uint16_t     Can_Send_Id_LK  = 0x141;
 
     Bridge_Check_Motor_Watchdog(bridge); // 检查电机是否在线
@@ -108,15 +111,26 @@ void Bridge_Send_Motor(Bridge_Type *bridge, uint8_t safetyMode) {
             }
         }
         //LK
+        isNotEmpty = 0;
         deviceID = Can_Send_Id_LK - 0x140 + 0x200 + 12;
         motor = MOTOR;
-        motorEnabled = motor && motor->inputEnabled && motor->online;
-        Current_LK = motorEnabled ? motor->input : 0;
+        motorEnabled = motor && motor->inputEnabled;
+        // Current_LK = motorEnabled ? motor->input : 0;
+        Current_LK = 500;
+        Speed_Lk = 5000;
+        iq_LK = 1000;
+        DeltaAngle_LK = 12000;
         isNotEmpty = isNotEmpty || motorEnabled;
+        VofaData->debug3 = motor->inputEnabled;
+        VofaData->debug4 = isNotEmpty;
+        VofaData->debug5 = deviceID;
         if (isNotEmpty && !safetyMode) {
-            Can_Send(Canx[i], Can_Send_Id_LK, 0xA100, 0, (Current_LK&0xff << 8) | (Current_LK >> 8), 0);
+            // Can_Send(Canx[i], Can_Send_Id_LK, 0xA200, (iq_LK&0xff << 8) | (iq_LK >> 8), ((Speed_Lk)&0xff << 8) | ((Speed_Lk & 0xffff) >> 8), ((Speed_Lk>>16)&0xff << 8) | (((Speed_Lk >> 16) & 0xffff) >> 8));
+            Can_Send(Canx[i], Can_Send_Id_LK, 0xA000, 0, 0xC800, 0);
+            VofaData->debug1 = 1;
         } else if (isNotEmpty && safetyMode) {
-            Can_Send(Canx[i], Can_Send_Id_LK, 0xA100, 0, 0, 0);
+            Can_Send(Canx[i], Can_Send_Id_LK, 0xA200, 0, 0, 0);
+            VofaData->debug1 = 0;
         }
     }
 }

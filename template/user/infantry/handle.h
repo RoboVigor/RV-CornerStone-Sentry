@@ -32,7 +32,7 @@
 #else
 #define __HANDLE_EXT extern
 #endif
-
+__HANDLE_EXT uint16_t test;
 // Stone Id
 __HANDLE_EXT uint8_t Board_Id, Robot_Id;
 
@@ -48,6 +48,7 @@ __HANDLE_EXT uint8_t SwingMode, SafetyMode, PigeonMode;
  typedef enum {normalShoot = 0, fastShoot = 1, frictShoot = 2}ShootMode_t;
 __HANDLE_EXT moveMode_t moveMode;
 __HANDLE_EXT ShootMode_t ShootMode;
+__HANDLE_EXT uint8_t AutoMode;
 
 // 上位机
 __HANDLE_EXT uint8_t        FacingEnemyMode;
@@ -58,8 +59,10 @@ __HANDLE_EXT chassis_data_t HostChassisData;
 __HANDLE_EXT Motor_Type Motor_LF, Motor_RF, Motor_RB, Motor_LB, Motor_LAJI;
 
 // 云台
-__HANDLE_EXT Motor_Type Motor_Yaw, Motor_Pitch;
-__HANDLE_EXT PID_Type   PID_Cloud_YawAngle, PID_Cloud_YawSpeed, PID_Cloud_PitchAngle, PID_Cloud_PitchSpeed, PID_Cloud_MotorYawSpeed;
+__HANDLE_EXT Motor_Type Motor_Yaw, Motor_Pitch, Motor_Pitch_L, Motor_Pitch_R, Motor_Yaw_L, Motor_Yaw_R;
+__HANDLE_EXT PID_Type   PID_Cloud_YawAngle, PID_Cloud_YawSpeed, PID_Cloud_PitchAngle, PID_Cloud_PitchSpeed, PID_Cloud_MotorYawSpeed, \
+                        PID_Secondary_PitchAngle_L, PID_Secondary_PitchAngle_R, PID_Secondary_PitchSpeed_L, PID_Secondary_PitchSpeed_R, \
+                        PID_Secondary_YawAngle_L, PID_Secondary_YawAngle_R, PID_Secondary_YawSpeed_L, PID_Secondary_YawSpeed_R;
 __HANDLE_EXT PID_Type   PID_Follow_Angle, PID_Follow_Speed;
 
 // 遥控器
@@ -89,8 +92,8 @@ __HANDLE_EXT Node_Type         Node_Judge, Node_Host, Node_Board, Node_SuperCap,
 __HANDLE_EXT PWM_Type PWM_Magazine_Servo;
 
 //发射机构
-__HANDLE_EXT Motor_Type Motor_Stir, Motor_FL, Motor_FR;                     // 左/右 摩擦轮 拨弹轮 电机
-__HANDLE_EXT PID_Type   PID_StirSpeed, PID_StirAngle, PID_FireL, PID_FireR; // 拨弹轮 速度/角度 PID
+__HANDLE_EXT Motor_Type Motor_Stir_L, Motor_Stir_R, Motor_FL_L,Motor_FR_L, Motor_FL_R, Motor_FR_R;                     // 左/右 摩擦轮 拨弹轮 电机
+__HANDLE_EXT PID_Type   PID_StirSpeed_L, PID_StirAngle_L, PID_StirSpeed_R, PID_StirAngle_R, PID_FireL_L, PID_FireR_L, PID_FireL_R, PID_FireR_R; // 拨弹轮 速度/角度 PID
 
 // PWM
 __HANDLE_EXT PWM_Type PWM_Test;

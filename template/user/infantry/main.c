@@ -27,13 +27,19 @@ int main(void) {
     Motor_Init(&Motor_RF, CHASSIS_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);
 
     // 发射机构电机
-    Motor_Init(&Motor_Stir, STIR_MOTOR_REDUCTION_RATE, ENABLE, ENABLE); //拨弹
-    Motor_Init(&Motor_FL, 1, DISABLE, ENABLE);
-    Motor_Init(&Motor_FR, 1, DISABLE, ENABLE);
+    Motor_Init(&Motor_Stir_L, STIR_MOTOR_REDUCTION_RATE, ENABLE, ENABLE); //拨弹
+    Motor_Init(&Motor_Stir_R, STIR_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);
+    Motor_Init(&Motor_FL_L, 1, DISABLE, ENABLE);
+    Motor_Init(&Motor_FR_L, 1, DISABLE, ENABLE);
+    Motor_Init(&Motor_FL_R, 1, DISABLE, ENABLE);
+    Motor_Init(&Motor_FR_R, 1, DISABLE, ENABLE);
 
     // 云台电机
-    Motor_Init(&Motor_Yaw, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);   
-    Motor_Init(&Motor_Pitch, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE); 
+    Motor_Init(&Motor_Yaw, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);
+    Motor_Init(&Motor_Yaw_L, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);
+    Motor_Init(&Motor_Yaw_R, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);    
+    Motor_Init(&Motor_Pitch_L, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE);
+    Motor_Init(&Motor_Pitch_R, GIMBAL_MOTOR_REDUCTION_RATE, ENABLE, ENABLE); 
 
     // 遥控器数据初始化
     DBUS_Init(&remoteData, &keyboardData, &mouseData);
@@ -69,6 +75,10 @@ int main(void) {
 
     // Calibration
     Motor_Set_Angle_Bias(&Motor_Yaw, 95);
+    Motor_Set_Angle_Bias(&Motor_Yaw_L, 0);
+    Motor_Set_Angle_Bias(&Motor_Yaw_R, 0);
+    Motor_Set_Angle_Bias(&Motor_Pitch_L, 0);
+    Motor_Set_Angle_Bias(&Motor_Pitch_R, 0);
     Gyroscope_Set_Bias(&ImuData, 30, 4, -7);
 
 
@@ -78,11 +88,17 @@ int main(void) {
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x203, &Motor_LB);
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x204, &Motor_RB);
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x205, &Motor_RF);
-    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x206, &Motor_Pitch);
-    Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x209, &Motor_Yaw);
-    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x203, &Motor_FL);
-    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x202, &Motor_FR);
-    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x204, &Motor_Stir);
+    Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x141, &Motor_Yaw);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x203, &Motor_Yaw_L);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x202, &Motor_Yaw_L);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x204, &Motor_Pitch_L);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x204, &Motor_Pitch_R);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x203, &Motor_FL_L);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x202, &Motor_FR_L);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x203, &Motor_FL_R);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x202, &Motor_FR_R);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x204, &Motor_Stir_L);
+    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x204, &Motor_Stir_R);
    
 
     // 总线设置
@@ -92,7 +108,7 @@ int main(void) {
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x500, &Node_SuperCap);
 
     // 陀螺仪
-    Gyroscope_Init(&Gyroscope_EulerData, 300); // 初始化
+    Gyroscope_Init(&Gyroscope_EulerData, 600); // 初始化
 
     //绑定debug指针
     VofaData = &(ProtocolData.debugInfo.vofaData);
@@ -103,8 +119,8 @@ int main(void) {
      *******************************************************************************/
 
     // 等待遥控器开启
-    while (!remoteData.state) {
-    }
+    // while (!remoteData.state) {
+    // }
     xTaskCreate(Task_Blink, "Task_Blink", 400, NULL, 3, NULL);
     // xTaskCreate(Task_Startup_Music, "Task_Startup_Music", 200, NULL, 3, NULL);
     //模式切换任务
@@ -114,8 +130,8 @@ int main(void) {
     xTaskCreate(Task_Can_Send, "Task_Can_Send", 500, NULL, 5, NULL);
 
     // 运动控制任务
-    xTaskCreate(Task_Chassis, "Task_Chassis", 400, NULL, 5, NULL);
-    xTaskCreate(Task_Gimbal, "Task_Gimbal", 500, NULL, 5, NULL);
+    // xTaskCreate(Task_Chassis, "Task_Chassis", 400, NULL, 5, NULL);
+    // xTaskCreate(Task_Gimbal, "Task_Gimbal", 500, NULL, 5, NULL);
     xTaskCreate(Task_Fire_Stir, "Task_Fire_Stir", 400, NULL, 6, NULL);
     xTaskCreate(Task_Fire_Frict, "Task_Fire_Frict", 400, NULL, 6, NULL);
 	xTaskCreate(Task_Wait,"Task_Wait",400,NULL,5,NULL);
