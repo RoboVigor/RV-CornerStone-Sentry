@@ -11,7 +11,7 @@
 #define ROBOT_SHARK (Robot_Id == 3)
 
 //裁判系统启用
-#define fricEnabled 0
+#define fricEnabled 1
 
 //SuperCap
 #define SuperCapEnabled 0

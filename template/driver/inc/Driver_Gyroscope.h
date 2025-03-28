@@ -57,6 +57,8 @@ typedef struct {
     float rollSpeed;
 } GyroscopeData_Type;
 
+float acc[3];
+
 
 
 

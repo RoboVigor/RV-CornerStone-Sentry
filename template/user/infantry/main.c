@@ -74,11 +74,11 @@ int main(void) {
     BSP_PWM_Init(&PWM_Magazine_Servo, 9000, 200, TIM_OCPolarity_Low);
 
     // Calibration
-    Motor_Set_Angle_Bias(&Motor_Yaw, 95);
-    Motor_Set_Angle_Bias(&Motor_Yaw_L, 0);
-    Motor_Set_Angle_Bias(&Motor_Yaw_R, 0);
-    Motor_Set_Angle_Bias(&Motor_Pitch_L, 0);
-    Motor_Set_Angle_Bias(&Motor_Pitch_R, 0);
+    Motor_Set_Angle_Bias(&Motor_Yaw, 0);
+    Motor_Set_Angle_Bias(&Motor_Yaw_L, 240.95);
+    Motor_Set_Angle_Bias(&Motor_Yaw_R, -3.56);
+    Motor_Set_Angle_Bias(&Motor_Pitch_L, 63.90);
+    Motor_Set_Angle_Bias(&Motor_Pitch_R, 183.25);
     Gyroscope_Set_Bias(&ImuData, 30, 4, -7);
 
 
@@ -88,7 +88,7 @@ int main(void) {
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x203, &Motor_LB);
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x204, &Motor_RB);
     Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x205, &Motor_RF);
-    Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x141, &Motor_Yaw);
+    Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x208, &Motor_Yaw);
     Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x20B, &Motor_Yaw_L);
     Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x20A, &Motor_Yaw_R);
     Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x209, &Motor_Pitch_L);
@@ -97,8 +97,8 @@ int main(void) {
     Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x206, &Motor_FR_L);
     Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x205, &Motor_FL_R);
     Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x204, &Motor_FR_R);
-    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x203, &Motor_Stir_L);
-    Bridge_Bind(&BridgeData, CAN2_BRIDGE, 0x202, &Motor_Stir_R);
+    Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x206, &Motor_Stir_L);
+    Bridge_Bind(&BridgeData, CAN1_BRIDGE, 0x207, &Motor_Stir_R);
    
 
     // 总线设置
@@ -131,7 +131,7 @@ int main(void) {
 
     // 运动控制任务
     xTaskCreate(Task_Chassis, "Task_Chassis", 400, NULL, 5, NULL);
-    // xTaskCreate(Task_Gimbal, "Task_Gimbal", 500, NULL, 5, NULL);
+    xTaskCreate(Task_Gimbal, "Task_Gimbal", 500, NULL, 5, NULL);
     xTaskCreate(Task_Fire_Stir, "Task_Fire_Stir", 400, NULL, 6, NULL);
     xTaskCreate(Task_Fire_Frict, "Task_Fire_Frict", 400, NULL, 6, NULL);
 	xTaskCreate(Task_Wait,"Task_Wait",400,NULL,5,NULL);

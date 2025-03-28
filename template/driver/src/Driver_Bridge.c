@@ -59,6 +59,7 @@ void Bridge_Receive_CAN(Bridge_Type *bridge, uint8_t type) {
     if (IS_MOTOR) {
         Motor_Type *motor = MOTOR;
         Motor_Update(motor, CanRxData.Data, 1);
+        VofaData->debug6 = deviceID;
     }else if(deviceID <= 0x188 && deviceID >= 0x181){
         deviceID = deviceID - 0x180 + 0x200 + 12;
         Motor_Type *motor = MOTOR;

@@ -48,11 +48,11 @@ __HANDLE_EXT uint8_t SwingMode, SafetyMode, PigeonMode;
  typedef enum {normalShoot = 0, fastShoot = 1, frictShoot = 2}ShootMode_t;
 __HANDLE_EXT moveMode_t moveMode;
 __HANDLE_EXT ShootMode_t ShootMode;
-__HANDLE_EXT uint8_t AutoMode;
+__HANDLE_EXT uint8_t AutoEnabled;
 
 // 上位机
 __HANDLE_EXT uint8_t        FacingEnemyMode;
-__HANDLE_EXT autoaim_data_t HostAutoaimData;
+__HANDLE_EXT autoaim_data_t HostAutoaimData_L, HostAutoaimData_R;
 __HANDLE_EXT chassis_data_t HostChassisData;
 
 // 电机
@@ -81,7 +81,7 @@ __HANDLE_EXT VofaData_type *VofaData;
 
 // 底盘
 __HANDLE_EXT ChassisData_Type ChassisData;
-__HANDLE_EXT PID_Type         PID_LFCM, PID_LBCM, PID_RBCM, PID_RFCM, PID_YawAngle, PID_YawSpeed, PID_Fx, PID_Fy, PID_T, PID_Power;
+__HANDLE_EXT PID_Type         PID_LFCM, PID_LBCM, PID_RBCM, PID_RFCM, PID_YawAngle, PID_YawSpeed, PID_Fx, PID_Fy, PID_T, PID_Power, PID_Dx, PID_Dy;
 __HANDLE_EXT uint8_t          PigeonCurrent, PigeonVoltage, PigeonEnergy, PigeonChargeEnable;
 
 // 通讯协议

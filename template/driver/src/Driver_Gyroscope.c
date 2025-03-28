@@ -149,6 +149,9 @@ void Gyroscope_Solve(GyroscopeData_Type *GyroscopeData) {
     //计算角速度
     Gyroscope_Calculate_angleSpeed(GyroscopeData, yawAngle, pitchAngle, rollAngle);
 
+    //acc
+    Gyroscope_Calculate_AccSpeed(acc, yawAngle, pitchAngle, rollAngle);
+
     // 更新滤波器
     Filter_Update(&Filter_Yaw, yawAngle);
 
@@ -257,4 +260,27 @@ void Gyroscope_Calculate_angleSpeed(GyroscopeData_Type *gd, float yaw, float pit
     gd->pitchSpeed = p;
     gd->rollSpeed = r;
     gd->yawSpeed = y;
+}
+
+void Gyroscope_Calculate_AccSpeed(float* acc, float yaw, float pitch, float roll){
+    yaw *= PI/160;
+    pitch *= PI/160;
+    roll *= PI/160;
+    float imuAcc[3] = {xAcc, yAcc, zAcc};
+    float imuACC_trans[3];
+    float transMatrix[9] = {cos(roll)*cos(yaw),cos(roll)*sin(yaw),-sin(roll), \
+                                cos(yaw)*sin(pitch)*sin(roll) - cos(pitch)*sin(yaw), cos(pitch)*cos(yaw) + sin(pitch)*sin(roll)*sin(yaw), cos(roll)*sin(pitch), \
+                                sin(pitch)*sin(yaw) + cos(pitch)*cos(yaw)*sin(roll), cos(pitch)*sin(roll)*sin(yaw) - cos(yaw)*sin(pitch), cos(pitch)*cos(roll)};
+    for(int j =0; j<3; j++){
+        imuACC_trans[j] = 0;
+        for(int k =0; k<3; k++){
+            imuACC_trans[j] += imuAcc[k] * transMatrix[j + k*3];
+        }
+    }
+    float x = imuACC_trans[0]* 180/PI;
+    float y = imuACC_trans[1]* 180/PI;
+    float z = imuACC_trans[2]* 180/PI;
+    acc[0] = x;
+    acc[1] = y;
+    acc[2] = z;
 }

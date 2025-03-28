@@ -15,7 +15,7 @@ void Task_Control(void *Parameters) {
         ControlMode = LEFT_SWITCH_BOTTOM && RIGHT_SWITCH_BOTTOM ? 2 : 1;
         if (ControlMode == 1) {
             //遥控器模式
-            AutoMode = 0;
+            AutoEnabled = 0;
             // PsAimEnabled  = LEFT_SWITCH_TOP && RIGHT_SWITCH_TOP;
             //FastmoveMode  = LEFT_SWITCH_TOP && RIGHT_SWITCH_TOP;
             MagzineOpened = LEFT_SWITCH_MIDDLE && RIGHT_SWITCH_TOP;
@@ -29,7 +29,7 @@ void Task_Control(void *Parameters) {
             SafetyMode = LEFT_SWITCH_TOP && RIGHT_SWITCH_TOP;
         } else if (ControlMode == 2) {
             //键鼠模式
-            AutoMode = 1;
+            AutoEnabled = (ProtocolData.gameStatus.game_progress == 4);
             PsShootEnabled = 0;
             StirEnabled    = mouseData.pressLeft;
             PsAimEnabled   = mouseData.pressRight;
@@ -93,7 +93,7 @@ void Task_Gimbal(void *Parameters) {
     float pitchAngleTargetFixStable = 0; // 上坡补偿
     float yawAngleTargetPs          = 0; // 视觉辅助
     float pitchAngleTargetPs        = 0; // 视觉辅助
-    int8_t pitchInit                  = 0; // pitch启动初始校准
+    int8_t startInit                  = 0; // 启动初始校准
 
     float yawAngleTarget_L          = 0;
     float yawAngleTarget_R          = 0;
@@ -109,11 +109,13 @@ void Task_Gimbal(void *Parameters) {
     int16_t pitchCurrent_L = 0;
     int16_t pitchCurrent_R = 0;
 
-    // Pitch轴斜坡参数
-    float pitchRampProgress    = 0;
+    // 斜坡参数
+    float RampProgress    = 0;
     float pitchRampStart_L       = Motor_Pitch_L.angle;
     float pitchRampStart_R       = Motor_Pitch_R.angle;
-    float pitchAngleTargetRamp = 0;
+    float yawRampStart_L       = Motor_Yaw_L.angle;
+    float yawRampStart_R       = Motor_Yaw_R.angle;
+
 
     // 初始化云台PID
     PID_Init(&PID_Cloud_YawAngle, 7, 1, 0, 4000, 10);
@@ -123,7 +125,6 @@ void Task_Gimbal(void *Parameters) {
     PID_Init(&PID_Cloud_MotorYawSpeed, 3, 1, 0, 23000, 0);
 
     while (1) {
-
         // 重置目标
         // yawAngleTarget   = 0;
         // pitchAngleTarget = 0;
@@ -157,36 +158,76 @@ void Task_Gimbal(void *Parameters) {
         yawAngleTarget += yawAngleTargetControl;
         // pitchAngleTarget += pitchAngleTargetControl;
 
-        // 视觉辅助, 待修改
-        // yawAngleTargetPs = HostAutoaimData.yaw_angle_diff;
-        // pitchAngleTargetPs = HostAutoaimData.pitch_angle_diff;
-        // if (PsAimEnabled) {
-        //      yawAngleTarget = yawAngle + yawAngleTargetPs;
-        //      pitchAngleTarget = pitchAngle + pitchAngleTargetPs;
-        // }
 
         // 限制云台运动范围即斜坡补偿，
         // MIAO(pitchAngleTarget, GIMBAL_PITCH_MIN + chassisAngle, GIMBAL_PITCH_MAX + chassisAngle);
 
         
         // 开机时pitch轴匀速抬起
-        if(!pitchInit){
-            pitchAngleTarget_L = RAMP(pitchRampStart_L, 0, pitchRampProgress);
-            pitchAngleTarget_R = RAMP(pitchRampStart_R, 0, pitchRampProgress);
-            if (pitchRampProgress < 1) {
-                pitchRampProgress += 0.005f;  
+        if(!startInit){
+            pitchAngleTarget_L = RAMP(pitchRampStart_L, 0, RampProgress);
+            pitchAngleTarget_R = RAMP(pitchRampStart_R, 0, RampProgress);
+            yawAngleTarget_L = RAMP(yawRampStart_L, 0, RampProgress);
+            yawAngleTarget_R = RAMP(yawRampStart_R, 0, RampProgress);
+            if (RampProgress < 1) {
+                RampProgress += 0.005f;  
             }else{
-                pitchInit = 1;
+                startInit = 1;
             }
         }else{
-            time += interval;
-            yawAngleTarget_L = 30*sin(0.1 * 2* PI * time) - 30;
-            yawAngleTarget_R = 30*sin(0.1 * 2* PI * time) - 30;
-            pitchAngleTarget_L = 90*sin(0.1 * 2* PI * time);
-            pitchAngleTarget_R = -90*sin(0.1 * 2* PI * time);
+            if(!AutoEnabled){
+                pitchAngleTarget_L = 0;
+                pitchAngleTarget_R = 0;
+                yawAngleTarget_L = 0;
+                yawAngleTarget_R = 0;
+            }else{
+                time += interval;
+                PsAimEnabled = (HostAutoaimData_L.yaw_angle_diff || HostAutoaimData_L.pitch_angle_diff) << 1 | (HostAutoaimData_R.yaw_angle_diff || HostAutoaimData_R.pitch_angle_diff);
+                switch (PsAimEnabled)
+                {
+                case 0b00:
+                    pitchAngleTarget_L = 30*sin(0.1 * 2* PI * time) - 30;
+                    pitchAngleTarget_R = 30*sin(0.1 * 2* PI * time) - 30;
+                    yawAngleTarget_L = 90*sin(0.1 * 2* PI * time);
+                    yawAngleTarget_R = -90*sin(0.1 * 2* PI * time);
+                    break;
+
+                case 0b01:
+                    pitchAngleTarget_L = 30*sin(0.1 * 2* PI * time) - 30;
+                    yawAngleTarget_L = 90*sin(0.1 * 2* PI * time);
+                    pitchAngleTarget_R = Motor_Pitch_R.angle + HostAutoaimData_R.pitch_angle_diff;
+                    yawAngleTarget_R = Motor_Yaw_R.angle + HostAutoaimData_R.yaw_angle_diff;
+                    break;
+
+                case 0b10:
+                    pitchAngleTarget_R = 30*sin(0.1 * 2* PI * time) - 30;
+                    yawAngleTarget_R = 90*sin(0.1 * 2* PI * time);
+                    pitchAngleTarget_L = Motor_Pitch_L.angle + HostAutoaimData_L.pitch_angle_diff;
+                    yawAngleTarget_L = Motor_Yaw_L.angle + HostAutoaimData_L.yaw_angle_diff;
+                    break;
+
+                case 0b11:
+                    pitchAngleTarget_L = Motor_Pitch_L.angle + HostAutoaimData_L.pitch_angle_diff;
+                    yawAngleTarget_L = Motor_Yaw_L.angle + HostAutoaimData_L.yaw_angle_diff;
+                    pitchAngleTarget_R = Motor_Pitch_R.angle + HostAutoaimData_R.pitch_angle_diff;
+                    yawAngleTarget_R = Motor_Yaw_R.angle + HostAutoaimData_R.yaw_angle_diff;
+                    break;
+
+                default:
+                    pitchAngleTarget_L = 30*sin(0.1 * 2* PI * time) - 30;
+                    pitchAngleTarget_R = 30*sin(0.1 * 2* PI * time) - 30;
+                    yawAngleTarget_L = 90*sin(0.1 * 2* PI * time);
+                    yawAngleTarget_R = -90*sin(0.1 * 2* PI * time);
+                    break;
+                }
+
+            }
         }
 
-
+        MIAO(yawAngleTarget_L, -90, 90);
+        MIAO(yawAngleTarget_R, -90, 90);
+        MIAO(pitchAngleTarget_L, -60, 0);
+        MIAO(pitchAngleTarget_R, -60, 0);
 
         // 计算PID
         PID_Calculate(&PID_Cloud_YawAngle, yawAngleTarget, Gyroscope_EulerData.yaw);
@@ -203,24 +244,17 @@ void Task_Gimbal(void *Parameters) {
 
         // 输出电流
         if(SwingMode){
-            yawCurrent = (1 - pow(2.71828, -2.23*abs(PID_Cloud_YawAngle.error)))*PID_Cloud_YawSpeed.output + pow(2.71828, -2.23*abs(PID_Cloud_YawAngle.error)) * PID_Cloud_MotorYawSpeed.output;   //动态权重融合
+            yawCurrent = PID_Cloud_YawSpeed.output;
+            // yawCurrent = (1 - pow(2.71828, -2.23*abs(PID_Cloud_YawAngle.error)))*PID_Cloud_YawSpeed.output + pow(2.71828, -2.23*abs(PID_Cloud_YawAngle.error)) * PID_Cloud_MotorYawSpeed.output;   //动态权重融合
         }else{
             yawCurrent = PID_Cloud_YawSpeed.output;
         }
         pitchCurrent = PID_Cloud_PitchSpeed.output; //-8500 * cos((pitchAngle * PI /180.0f))
-        // Motor_Yaw.input   = yawCurrent;
-        // Motor_Yaw_L.input = PID_Secondary_YawSpeed_L.output;
-        // Motor_Yaw_R.input = PID_Secondary_YawSpeed_R.output;
-        // Motor_Pitch_L.input = PID_Secondary_PitchSpeed_L.output;
-        // Motor_Pitch_R.input = PID_Secondary_PitchSpeed_R.output;
-        VofaData->debug1 = Motor_Pitch_L.angle;
-        VofaData->debug2 = Motor_Pitch_R.angle;
-        VofaData->debug4 = Motor_Yaw_L.angle;
-        VofaData->debug3 = Motor_Yaw_R.angle;
-        // VofaData->debug5 = PID_Cloud_YawAngle.error;
-        // VofaData->debug6 = yawAngleTargetControl;
-
-
+        Motor_Yaw.input   = yawCurrent;
+        Motor_Yaw_L.input = PID_Secondary_YawSpeed_L.output;
+        Motor_Yaw_R.input = PID_Secondary_YawSpeed_R.output;
+        Motor_Pitch_L.input = PID_Secondary_PitchSpeed_L.output;
+        Motor_Pitch_R.input = PID_Secondary_PitchSpeed_R.output;
         //任务间隔
         vTaskDelayUntil(&LastWakeTime, intervalms);
     }
@@ -275,6 +309,9 @@ void Task_Chassis(void *Parameters) {
     //闭环功率PID
     PID_Init(&PID_Power, 0.5, 0, 0, 40, 0);
 
+    PID_Init(&PID_Dx, 1, 0.1, 0, 10, 2);
+    PID_Init(&PID_Dy, 1, 0.1, 0, 10, 2);
+
     // 初始化底盘
     Chassis_Init(&ChassisData);
 
@@ -288,6 +325,11 @@ void Task_Chassis(void *Parameters) {
 
     if(fricEnabled) moveMode = frictMove;
 
+    enum autoMode_e {toCentre = 0, toBase = 1};
+    enum autoMode_e autoMode;
+    
+    float speedX = 0, speedY = 0, DisplaceX = 0, DisplaceY = 0;
+
     while (1) {
         // 设置反馈值
         motorAngle  = Motor_Yaw.angle;                                 // 电机角度
@@ -299,13 +341,11 @@ void Task_Chassis(void *Parameters) {
         realMotorSpeed[1] = Motor_LB.speed *RPM2RPS;
         realMotorSpeed[2] = Motor_RB.speed *RPM2RPS;
         realMotorSpeed[3] = Motor_RF.speed *RPM2RPS;
+        speedX += acc[0];
+        speedY += acc[1];
+        DisplaceX += speedX;
+        DisplaceY += speedY;
 
-        // 视觉专属follow PID
-        if (PsAimEnabled) {
-            PID_Follow_Angle.p = 1.5;
-        } else {
-            PID_Follow_Angle.p = 1.3;
-        }
 
         //小陀螺模式
         switch (SwingMode)
@@ -357,6 +397,35 @@ void Task_Chassis(void *Parameters) {
         //运动学正解算底盘真实速度
         Chassis_Calculate_Real_Speed(&ChassisData, realMotorSpeed);
 
+        // auto
+        if(AutoEnabled){
+            swingModeEnabled = 1;
+            if(ProtocolData.gameRobotstatus.remain_HP <= 0.5 * ProtocolData.gameRobotstatus.max_HP){
+                autoMode = toBase;
+            }else{
+                autoMode = toCentre;
+            }
+
+            switch (autoMode)
+            {
+            case toCentre:
+                vy = PID_Calculate(&PID_Dy, -4.3, DisplaceY);
+                if(ABS(PID_Dy.error) < 0.3){
+                    vx = PID_Calculate(&PID_Dx, 5, DisplaceX);
+                }
+                break;
+
+            case toBase:
+                vy = PID_Calculate(&PID_Dy, -1, DisplaceY);
+                if(ABS(PID_Dy.error < 0.2)){
+                    vx = PID_Calculate(&PID_Dx, 0.6, DisplaceX);
+                }
+            
+            default:
+                break;
+            }
+        }
+
         //地盘跟随和小陀螺
         if(!swingModeEnabled){
             //底盘跟随云台
@@ -379,6 +448,7 @@ void Task_Chassis(void *Parameters) {
             // 小陀螺
             vw = swingSpeed;
         }
+
 
         // 开机时底盘匀速回正
         vwRamp = RAMP(0, vw, vwRampProgress);
@@ -405,7 +475,6 @@ void Task_Chassis(void *Parameters) {
         Chassis_Update(&ChassisData, vx, vy, vwRamp); // 更新麦轮转速
         Chassis_Fix(&ChassisData, motorAngle);        // 修正旋转后底盘的前进方向
         Chassis_Calculate_Rotor_Speed(&ChassisData);  // 麦轮解算
-        VofaData->debug1 = motorAngle;
 
         PID_Calculate(&PID_Fx, vx, ChassisData.realvx);
         PID_Calculate(&PID_Fy, vy, ChassisData.realvy);
@@ -481,12 +550,20 @@ void Task_Host(void *Parameters) {
         // receive autoaim data
         protocolInfo = Protocol_Get_Info_Handle(0x401);
         if (protocolInfo->lastReceiveSeq != protocolInfo->receiveSeq) {
-            memcpy(HostAutoaimData.data, ProtocolData.autoaimData.data, protocolInfo->length);
+            memcpy(HostAutoaimData_R.data, ProtocolData.autoaimData.data, protocolInfo->length);
             protocolInfo->lastReceiveSeq = protocolInfo->receiveSeq;
         } else {
-            memset(HostAutoaimData.data, 0, protocolInfo->length);
+            memset(HostAutoaimData_R.data, 0, protocolInfo->length);
         }
-        FacingEnemyMode = HostAutoaimData.yaw_angle_diff != 0 || HostAutoaimData.pitch_angle_diff != 0;
+
+        // protocolInfo = Protocol_Get_Info_Handle(0x401);
+        // if (protocolInfo->lastReceiveSeq != protocolInfo->receiveSeq) {
+        //     memcpy(HostAutoaimData_L.data, ProtocolData.autoaimData.data, protocolInfo->length);
+        //     protocolInfo->lastReceiveSeq = protocolInfo->receiveSeq;
+        // } else {
+        //     memset(HostAutoaimData_L.data, 0, protocolInfo->length);
+        // }
+
         // DebugData.debug5 = protocolInfo->receiveSeq;
 
         // // receive chassis data
@@ -578,82 +655,57 @@ void Task_Fire_Stir(void *Parameters) {
     // LASER_ON;
 
     while (1) {
-        // 弹舱盖开关
-        if (ROBOT_MIAO) {
-            PWM_Set_Compare(&PWM_Magazine_Servo, MagzineOpened ? 10 : 5);
-        } else if (ROBOT_WANG) {
-            PWM_Set_Compare(&PWM_Magazine_Servo, MagzineOpened ? 16 : 6);
-        } else if (ROBOT_SHARK) {
-            PWM_Set_Compare(&PWM_Magazine_Servo, MagzineOpened ? 6 : 15);
-        }
-        // 拨弹速度
-        stirSpeed = 110;
-        if (ProtocolData.gameRobotstatus.shooter_id1_17mm_cooling_rate == 20) {
-            stirSpeed = 110;
-        } else if (ProtocolData.gameRobotstatus.shooter_id1_17mm_cooling_rate == 30) {
-            stirSpeed = 140;
-        } else if (ProtocolData.gameRobotstatus.shooter_id1_17mm_cooling_rate == 40) {
-            stirSpeed = 160;
-        }
-        stirSpeed * 3;
-
-        // stirSpeed = 143; // 热量：120
-        // stirSpeed = 120; // 热量：240
-        // stirSpeed = 120; // 热量：360
-
-        // X模式
 
         //热量控制
         maxShootHeat = ProtocolData.gameRobotstatus.shooter_id1_17mm_cooling_limit - ProtocolData.gameRobotstatus.shooter_id1_17mm_speed_limit * 2;
 
         // 输入射击模式
-        shootMode = shootIdle;
+        PsShootEnabled = HostAutoaimData_L.fire << 1 | HostAutoaimData_R.fire;
+        switch (PsShootEnabled)
+        {
+        case 0b00:  
+            stirSpeed_L = 0;
+            stirSpeed_R = 0;
+            break;
+        
+        case 0b01:
+            stirSpeed_L = 0;
+            stirSpeed_R = -500;
+            if (ProtocolData.powerHeatData.shooter_id1_17mm_cooling_heat > maxShootHeat || ProtocolData.powerHeatData.shooter_id2_17mm_cooling_heat > maxShootHeat)
+            {
+                stirSpeed_R = 0;
+            }
+            break;
+        
+        case 0xb10:
+            stirSpeed_L = -500;
+            stirSpeed_R = 0;
+            if (ProtocolData.powerHeatData.shooter_id1_17mm_cooling_heat > maxShootHeat || ProtocolData.powerHeatData.shooter_id2_17mm_cooling_heat > maxShootHeat)
+            {
+                stirSpeed_L = 0;
+            }
+            break;
+        
+        case 0b11:
+            stirSpeed_L = -500;
+            stirSpeed_R = -500;
+            if (ProtocolData.powerHeatData.shooter_id1_17mm_cooling_heat > maxShootHeat || ProtocolData.powerHeatData.shooter_id2_17mm_cooling_heat > maxShootHeat)
+            {
+                stirSpeed_L = 0;
+                stirSpeed_R = 0;
+            }
+            break;
 
-        if (StirEnabled) {
-            shootMode = shootToDeath;
-        }
-        // 视觉辅助
-        // if (PsShootEnabled && lastSeq != Ps.autoaimData.seq && Ps.autoaimData.biu_biu_state) {
-        //     shootMode = shootToDeath;
-        // }
-        // lastSeq = Ps.autoaimData.seq;
+        default:
+            break;
+        }	
 
-        if (ProtocolData.powerHeatData.shooter_id1_17mm_cooling_heat > maxShootHeat) {
-            shootMode = shootIdle;
-        }
-		
-		/*
-		
-        // 控制拨弹轮
-        if (shootMode == shootIdle) {
-            // 停止
-            Motor_Stir.input = 0;
-//						targetSpeed = 0;
-//						PID_Calculate(&PID_FireL, targetSpeed, Motor_FL.speed);
-//						PID_Calculate(&PID_FireR, -1*targetSpeed, Motor_FR.speed);
-//						Motor_FL.input = PID_FireL.output;
-//						Motor_FR.input = PID_FireR.output;
-
-        } else if (shootMode == shootToDeath) {
-            // 连发
-            PID_Calculate(&PID_StirSpeed, stirSpeed, Motor_Stir.speed * RPM2RPS);
-            Motor_Stir.input = PID_StirSpeed.output;
-//						targetSpeed = 1000;
-//						PID_Calculate(&PID_FireL, targetSpeed, Motor_FL.speed);
-//						PID_Calculate(&PID_FireR, targetSpeed, Motor_FR.speed);
-//					
-//						Motor_FL.input = -1*PID_FireL.output;
-//						Motor_FR.input = 1*PID_FireR.output;
-        }
-		*/
-		stirSpeed=0;
-		
+		// stirSpeed_L = -400;
+        // stirSpeed_R = -400;
         PID_Calculate(&PID_StirSpeed_L, stirSpeed_L, Motor_Stir_L.speed * RPM2RPS);
         PID_Calculate(&PID_StirSpeed_R, stirSpeed_R, Motor_Stir_R.speed * RPM2RPS);
-        //Motor_Stir_L.input = PID_StirSpeed_L.output;
-		//Motor_Stir_R.input = PID_StirSpeed_R.output;
-        Motor_Stir_L.input = 0;
-		Motor_Stir_R.input = 0;
+        Motor_Stir_L.input = PID_StirSpeed_L.output;
+		Motor_Stir_R.input = PID_StirSpeed_R.output;
 
         // DebugData.debug1 = PID_StirSpeed.output;
         // DebugData.debug2 = shootMode;
@@ -753,21 +805,20 @@ void Task_Fire_Frict(void *Parameters) {
 //			PID_Calculate(&PID_FireR, -1*targetSpeed, Motor_FR.speed);
 //			Motor_FL.input = PID_FireL.output;
 //			Motor_FR.input = PID_FireR.output;
-//        }
+//        
 		targetSpeed = 0;
+        targetSpeed_L = -400;
+        targetSpeed_R = -400;
 		PID_Calculate(&PID_FireL_L, -1*targetSpeed_L, Motor_FL_L.speed);
 		PID_Calculate(&PID_FireR_L, targetSpeed_L, Motor_FR_L.speed);
         PID_Calculate(&PID_FireL_R, -1*targetSpeed_R, Motor_FL_R.speed);
 		PID_Calculate(&PID_FireR_R, targetSpeed_R, Motor_FR_R.speed);
-		//Motor_FL_L.input = PID_FireL_L.output;
-		//Motor_FR_L.input = PID_FireR_L.output;
-        //Motor_FL_R.input = PID_FireL_R.output;
-		//Motor_FR_R.input = PID_FireR_R.output;
-		Motor_FL_L.input = 1000;
-		Motor_FR_L.input = 1000;
-        Motor_FL_R.input = 1000;
-		Motor_FR_R.input = 1000;
+		Motor_FL_L.input = PID_FireL_L.output;
+		Motor_FR_L.input = PID_FireR_L.output;
+        Motor_FL_R.input = PID_FireL_R.output;
+		Motor_FR_R.input = PID_FireR_R.output;
 
+        VofaData->debug1 = Motor_FL_L.online;
 
         // DebugData.debug1 = Motor_FL.speed;
         // DebugData.debug2 = targetSpeed;
